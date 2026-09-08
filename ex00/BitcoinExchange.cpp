@@ -6,7 +6,7 @@
 /*   By: gyildiz <gyildiz@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/01 13:26:52 by gyildiz           #+#    #+#             */
-/*   Updated: 2026/09/07 19:31:04 by gyildiz          ###   ########.fr       */
+/*   Updated: 2026/09/08 15:19:16 by gyildiz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,11 @@ BitcoinExchange	&BitcoinExchange::operator=(const BitcoinExchange &assign)
 BitcoinExchange::~BitcoinExchange()
 {}
 
+const char *BitcoinExchange::max_input_value::what() const throw()
+{
+	return ("The value must be between [0-1000]");
+}
+
 /*
 	First we check the syntax for date is true, after that we will
 	use ctime library to validate date.
@@ -47,6 +52,8 @@ BitcoinExchange::~BitcoinExchange()
 bool	BitcoinExchange::date_check(std::string &date)
 {
 	int length = date.length();
+	if (length == 0)
+		return false;
 	int count = std::count(date.begin(), date.end(), '-');
 	if (length != 10 || count != 2 || date[4] != '-' || date[7] != '-')
 		return (false);
@@ -88,9 +95,11 @@ bool	BitcoinExchange::date_check(std::string &date)
 bool BitcoinExchange::value_check(std::string &value, bool is_input_file)
 {
 	size_t length = value.length();
-	int count = std::count(value.begin(), value.end(), '-');
+	if (length == 0)
+		return false;
+	int count = std::count(value.begin(), value.end(), '.');
 
-	if(count != 1)
+	if(count > 1)
 		return false;
 	if (value[0] == '.' || value[length - 1] == '.')
 		return (false);
@@ -106,7 +115,8 @@ bool BitcoinExchange::value_check(std::string &value, bool is_input_file)
 /*
 	Buna benzer input file için fonksiyon yazacapız
 */
-bool	BitcoinExchange::line_check_db(std::string &line, std::string &date, std::string &value)
+bool	BitcoinExchange::line_check_db\
+(std::string &line, std::string &date, std::string &value)
 {
 	int count = std::count(line.begin(), line.end(), ',');
 	std::string::iterator begin = line.begin();
@@ -132,14 +142,8 @@ bool	BitcoinExchange::line_check_db(std::string &line, std::string &date, std::s
 	Must start to load database and input_file, as soon as it sees something fishy,
 	it should stop.
 	
-	Invoking member class function class calls are different, they need to be invoked
-	with (this->*f).
-	
-	Hata throwlamasını burada yapacağım, line alınacak,
-	format olarak doğru mu yanlış mı kontrol edilecek. Yanlış ise
-	one göre hata throwlanacak. 0-1000 validation'ı henüz burada yok. 
-	Doğru ise insert. Float min max 0'dan küçük olma durumu kontrolü de burada
-	yapılacak.
+	Invoking member class function class calls are different, they need to be 
+	invoked with (this->*f).
 */
 void	BitcoinExchange::parse_validate_load\
 (std::ifstream &file, bool(BitcoinExchange::*f)\
@@ -167,14 +171,20 @@ void	BitcoinExchange::parse_validate_load\
 		dvalue = strtod(value.c_str(),NULL);
 		if (!input_file)
 		{
-			if (dvalue > __FLT_MAX__)
+			if (dvalue > __FLT_MAX__ || dvalue < 0)
+				throw std::range_error\
+				("Value in dataset exceeds float range / it is negative");
+			_db.insert\
+			(std::pair<std::string, float>(date, static_cast<float>(dvalue)));
 		}
 		else
 		{
-			
+			if (dvalue > 1000 || dvalue < 0)
+				throw max_input_value();
+			_input.insert\
+			(std::pair<std::string, float>(date, static_cast<float>(dvalue)));
 		}
 	}
-	
 }
 
 /*
@@ -190,7 +200,6 @@ void	BitcoinExchange::load_database()
 		throw std::runtime_error\
 		("Corrupted file format: Could not read expected data.");
 	parse_validate_load(database, &BitcoinExchange::line_check_db , false);
-	
 }
 
 // void	BitcoinExchange::load_input()

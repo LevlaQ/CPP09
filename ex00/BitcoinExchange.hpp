@@ -6,7 +6,7 @@
 /*   By: gyildiz <gyildiz@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/01 13:26:47 by gyildiz           #+#    #+#             */
-/*   Updated: 2026/09/07 19:23:49 by gyildiz          ###   ########.fr       */
+/*   Updated: 2026/09/08 12:25:16 by gyildiz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,11 @@ class BitcoinExchange
 
 		bool date_check(std::string &date);
 		bool value_check(std::string &value, bool is_input_file);
+		
+		class max_input_value : public std::exception
+		{
+			virtual const char	*what() const throw();
+		};
 	private:
 		std::map<std::string, float>		_db;
 		std::multimap<std::string, float>	_input;
