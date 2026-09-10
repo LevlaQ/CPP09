@@ -6,7 +6,7 @@
 /*   By: gyildiz <gyildiz@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/01 13:26:47 by gyildiz           #+#    #+#             */
-/*   Updated: 2026/09/08 12:25:16 by gyildiz          ###   ########.fr       */
+/*   Updated: 2026/09/10 17:36:34 by gyildiz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,6 @@
 # include <stdexcept>
 # include <iostream>
 # include <algorithm>
-# include <ctime>
 # include <limits>
 
 class BitcoinExchange
@@ -36,25 +35,20 @@ class BitcoinExchange
 		~BitcoinExchange();
 		
 		void	load_database();
-		//void	load_input();
 
-		void	parse_validate_load\
-		(std::ifstream &file, bool(BitcoinExchange::*f)\
-		(std::string &, std::string &, std::string &), bool input_file);
+		void	parse_validate_load(std::ifstream &file);
 		bool	line_check_db\
 		(std::string &line, std::string &date, std::string &value);
-		//void	is_correct_format_input();
-
-		bool date_check(std::string &date);
-		bool value_check(std::string &value, bool is_input_file);
+		bool	line_check_input\
+		(std::string &line, std::string &date, std::string &value);
 		
-		class max_input_value : public std::exception
-		{
-			virtual const char	*what() const throw();
-		};
+		void	process_input(const std::string &filepath);
+		bool	find_closest_rate(const std::string &date, float &rate);
+		
+		bool date_check(std::string &date);
+		bool value_check(std::string &value);
 	private:
 		std::map<std::string, float>		_db;
-		std::multimap<std::string, float>	_input;
 };
 
 #endif

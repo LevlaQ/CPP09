@@ -6,7 +6,7 @@
 /*   By: gyildiz <gyildiz@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/01 13:26:52 by gyildiz           #+#    #+#             */
-/*   Updated: 2026/09/08 15:19:16 by gyildiz          ###   ########.fr       */
+/*   Updated: 2026/09/10 18:05:32 by gyildiz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,11 +27,6 @@ BitcoinExchange	&BitcoinExchange::operator=(const BitcoinExchange &assign)
 
 BitcoinExchange::~BitcoinExchange()
 {}
-
-const char *BitcoinExchange::max_input_value::what() const throw()
-{
-	return ("The value must be between [0-1000]");
-}
 
 /*
 	First we check the syntax for date is true, after that we will
@@ -92,18 +87,23 @@ bool	BitcoinExchange::date_check(std::string &date)
 	return (true);
 }
 
-bool BitcoinExchange::value_check(std::string &value, bool is_input_file)
+bool BitcoinExchange::value_check(std::string &value)
 {
 	size_t length = value.length();
 	if (length == 0)
 		return false;
-	int count = std::count(value.begin(), value.end(), '.');
 
-	if(count > 1)
+	size_t start = (value[0] == '-') ? 1 : 0;
+	if (start == length)
 		return false;
-	if (value[0] == '.' || value[length - 1] == '.')
+
+	int count = std::count(value.begin() + start, value.end(), '.');
+	if (count > 1)
+		return false;
+	if (value[start] == '.' || value[length - 1] == '.')
 		return (false);
-	for (size_t i = 0; i < length; i++)
+
+	for (size_t i = start; i < length; i++)
 	{
 		if(!std::isdigit(static_cast<unsigned char>(value[i])))
 			if(value[i] != '.')
@@ -113,7 +113,7 @@ bool BitcoinExchange::value_check(std::string &value, bool is_input_file)
 }
 
 /*
-	Buna benzer input file için fonksiyon yazacapız
+	Checks if database line format is appropriate.
 */
 bool	BitcoinExchange::line_check_db\
 (std::string &line, std::string &date, std::string &value)
@@ -133,21 +133,48 @@ bool	BitcoinExchange::line_check_db\
 	value = line.substr(diff + 1);
 	if (!value.size())
 		return false;
-	if (!value_check(value, false))
+	if (!value_check(value))
 		return false;
 	return true;
 }
 
 /*
-	Must start to load database and input_file, as soon as it sees something fishy,
-	it should stop.
-	
-	Invoking member class function class calls are different, they need to be 
-	invoked with (this->*f).
+	date | value
+	2005-02-02 | 0.1
+	2011-09-14 | 390.57
+	2010-11-03 | 517.239
+	         21d12
 */
-void	BitcoinExchange::parse_validate_load\
-(std::ifstream &file, bool(BitcoinExchange::*f)\
-(std::string &, std::string &, std::string &), bool input_file)
+bool	BitcoinExchange::line_check_input\
+(std::string &line, std::string &date, std::string &value)
+{
+	int count = std::count(line.begin(), line.end(), '|');
+	std::string::iterator begin = line.begin();
+	std::string::iterator pipe = std::find(line.begin(), line.end(), '|');
+	
+	if (count != 1)
+		return false;
+	if (pipe == line.begin() || pipe + 1 == line.end())
+		return false;
+	if (*(pipe - 1) != ' ' || *(pipe + 1) != ' ')
+		return false;
+
+	size_t diff = pipe - begin;
+	date = line.substr(0, diff - 1);
+	if (!date.size())
+		return false;
+	value = line.substr(diff + 2);
+	if (!value.size())
+		return false;
+	return true;
+}
+
+/*
+	Must start to load database and as soon as it sees something fishy,
+	it should stop.
+	Error's are thrown here
+*/
+void	BitcoinExchange::parse_validate_load(std::ifstream &file)
 {
 	std::string line;
 	bool		valid = true;
@@ -158,32 +185,18 @@ void	BitcoinExchange::parse_validate_load\
 	
 	while (std::getline(file,line))
 	{
-		valid = (this->*f)(line, date, value);
+		valid = line_check_db(line, date, value);
 		if (!valid)
 		{
-			if (!input_file)
-				throw std::invalid_argument\
-				("File data format is invalid, use : YYYY-MM-DD,<value>");
-			else
 				throw std::invalid_argument\
 				("File data format is invalid, use : YYYY-MM-DD | <value>");
 		}
 		dvalue = strtod(value.c_str(),NULL);
-		if (!input_file)
-		{
-			if (dvalue > __FLT_MAX__ || dvalue < 0)
-				throw std::range_error\
-				("Value in dataset exceeds float range / it is negative");
-			_db.insert\
-			(std::pair<std::string, float>(date, static_cast<float>(dvalue)));
-		}
-		else
-		{
-			if (dvalue > 1000 || dvalue < 0)
-				throw max_input_value();
-			_input.insert\
-			(std::pair<std::string, float>(date, static_cast<float>(dvalue)));
-		}
+		if (dvalue > __FLT_MAX__ || dvalue < 0)
+			throw std::range_error\
+			("Value in dataset exceeds float range / it is negative");
+		_db.insert\
+		(std::pair<std::string, float>(date, static_cast<float>(dvalue)));
 	}
 }
 
@@ -199,10 +212,87 @@ void	BitcoinExchange::load_database()
 		access(filepath.c_str(), R_OK) != 0)
 		throw std::runtime_error\
 		("Corrupted file format: Could not read expected data.");
-	parse_validate_load(database, &BitcoinExchange::line_check_db , false);
+	parse_validate_load(database);
 }
 
-// void	BitcoinExchange::load_input()
-// {
-	
-// }
+bool	BitcoinExchange::find_closest_rate(const std::string &date, float &rate)
+{
+	std::map<std::string, float>::iterator it = _db.lower_bound(date);
+
+	if (it != _db.end() && it->first == date)
+	{
+		rate = it->second;
+		return true;
+	}
+	if (it == _db.begin())
+	{
+		return false;
+	}
+	--it;
+	rate = it->second;
+	return true;
+}
+
+void BitcoinExchange::process_input(const std::string &filepath)
+{
+	std::ifstream file(filepath.c_str());
+	if (access(filepath.c_str(), F_OK) != 0 || file.is_open() == false || \
+		access(filepath.c_str(), R_OK) != 0)
+		throw std::runtime_error("Error: could not open file.");
+
+	std::string line;
+	std::string date;
+	std::string value;
+	double		dvalue;
+	bool first = true;
+
+	while (std::getline(file, line))
+	{
+		if (first)
+		{
+			first = false;
+			continue;
+		}
+		if (!line_check_input(line, date, value))
+		{
+			std::cout << \
+			"Error: bad line format, should be YYYY-MM-DD | <value>. Yours is: "\
+			 << line << std::endl;
+			continue;
+		}
+		if (!date_check(date))
+		{
+			std::cout << "Error: bad input => " << date;
+			if (!value_check(value))
+				std::cout << " | " << value << std::endl;
+			std::cout << std::endl;
+			continue;
+		}
+		if (!value_check(value))
+		{
+			std::cout << "Error: bad input => " << value << std::endl;
+			continue;
+		}
+
+		dvalue = std::strtod(value.c_str(), NULL);
+		if (dvalue < 0)
+		{
+			std::cout << "Error: not a positive number." << std::endl;
+			continue;
+		}
+		if (dvalue > 1000)
+		{
+			std::cout << "Error: too large a number." << std::endl;
+			continue;
+		}
+
+		float rate;
+		if (!find_closest_rate(date, rate))
+		{
+			std::cout << "Error: no matching rate found for " << date << std::endl;
+			continue;
+		}
+		std::cout << date << " => " << value << " = " << (dvalue * rate) << std::endl;
+	}
+}
+

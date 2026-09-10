@@ -6,11 +6,11 @@
 #    By: gyildiz <gyildiz@student.42istanbul.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/08/29 16:21:08 by gyildiz           #+#    #+#              #
-#    Updated: 2026/08/29 16:22:46 by gyildiz          ###   ########.fr        #
+#    Updated: 2026/09/10 18:06:38 by gyildiz          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-SRCS = main.cpp
+SRCS = main.cpp BitcoinExchange.cpp
 OBJS = $(SRCS:.cpp=.o)
 EXE_NAME = btc
 CXX = c++
