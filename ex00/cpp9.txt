@@ -1,0 +1,2 @@
+Newline'lar atıldığı zamanki error mesajlarının sayısına bak.
+Hangi zamanlarda newline'lar problem oluyor?

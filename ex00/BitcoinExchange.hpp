@@ -6,7 +6,7 @@
 /*   By: gyildiz <gyildiz@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/01 13:26:47 by gyildiz           #+#    #+#             */
-/*   Updated: 2026/09/10 17:36:34 by gyildiz          ###   ########.fr       */
+/*   Updated: 2026/09/30 14:51:30 by gyildiz          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@
 # include <iostream>
 # include <algorithm>
 # include <limits>
+# include <sstream>
 
 class BitcoinExchange
 {
@@ -43,10 +44,13 @@ class BitcoinExchange
 		(std::string &line, std::string &date, std::string &value);
 		
 		void	process_input(const std::string &filepath);
+		void	process_input_line(std::string &line);
 		bool	find_closest_rate(const std::string &date, float &rate);
 		
 		bool date_check(std::string &date);
 		bool value_check(std::string &value);
+		
+		std::string	format_number(double value);
 	private:
 		std::map<std::string, float>		_db;
 };
